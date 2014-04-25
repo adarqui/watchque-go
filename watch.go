@@ -1,37 +1,33 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/gosexy/redis"
 	"github.com/howeyc/fsnotify"
 	"github.com/romanoff/fsmonitor"
-	"github.com/gosexy/redis"
-	"encoding/json"
+	"log"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
-	"errors"
-	"os"
-	"log"
-	"fmt"
 )
-
 
 type ResqueArgs struct {
 	FilePath string `json:"filePath"`
-	Event string `json:"event"`
+	Event    string `json:"event"`
 }
-
 
 type ResquePacket struct {
-	Class string `json:"class"`
-	Args []ResqueArgs `json:"args"`
+	Class string       `json:"class"`
+	Args  []ResqueArgs `json:"args"`
 }
-
 
 const (
 	DEST_REDIS = iota
 	DEST_LOCAL
 )
-
 
 const (
 	MASK_CREATE = 0x01
@@ -40,33 +36,29 @@ const (
 	MASK_RENAME = 0x08
 )
 
-
 type Watcher struct {
-	Dest string
-	Class string
-	Queue string
+	Dest              string
+	Class             string
+	Queue             string
 	QueuePreFormatted string
-	Events string
-	Source string
-	destType int
-	mask uint32
-	Redis *Redis
-	Local *Local
+	Events            string
+	Source            string
+	destType          int
+	mask              uint32
+	Redis             *Redis
+	Local             *Local
 }
-
 
 type Redis struct {
 	Host string
 	Port uint
-	red *redis.Client
+	red  *redis.Client
 }
-
 
 type Local struct {
 	Base string
-	Bin string
+	Bin  string
 }
-
 
 type Opts struct {
 	debug bool
@@ -74,25 +66,23 @@ type Opts struct {
 
 var opts Opts
 
-
 func usage() {
-	log.Fatal("usage: ./watchque-go [<redishost:port>|</path/to/bin/dir>] <Class1>:<Queue1>:<Events>:<Directory1,...,DirectoryN> ... <ClassN>:<QueueN>:<Events>:<Directory1, ...,DirectoryN>");
+	log.Fatal("usage: ./watchque-go [<redishost:port>|</path/to/bin/dir>] <Class1>:<Queue1>:<Events>:<Directory1,...,DirectoryN> ... <ClassN>:<QueueN>:<Events>:<Directory1, ...,DirectoryN>")
 }
-
 
 func ParseOption(arg string) {
 	switch arg {
-		case "--debug=on":
-			opts.debug = true
-		case "--debug=off":
-			opts.debug = false
+	case "--debug=on":
+		opts.debug = true
+	case "--debug=off":
+		opts.debug = false
 	}
 }
 
 func Parse(dest, arg string) ([]*Watcher, error) {
-	arr := make ([]*Watcher, 0)
+	arr := make([]*Watcher, 0)
 
-	tokens := strings.Split(arg, ":");
+	tokens := strings.Split(arg, ":")
 	if len(tokens) != 4 {
 		return nil, errors.New("Invalid argument")
 	}
@@ -130,22 +120,28 @@ func Parse(dest, arg string) ([]*Watcher, error) {
 	var mask uint32 = 0
 	for _, event := range events {
 		switch event {
-			case 'c': {
+		case 'c':
+			{
 				mask |= MASK_CREATE
 			}
-			case 'u': {
+		case 'u':
+			{
 				mask |= MASK_UPDATE
 			}
-			case 'd': {
+		case 'd':
+			{
 				mask |= MASK_DELETE
 			}
-			case 'r': {
+		case 'r':
+			{
 				mask |= MASK_RENAME
 			}
-			case 'a': {
+		case 'a':
+			{
 				mask = MASK_CREATE | MASK_UPDATE | MASK_DELETE | MASK_RENAME
 			}
-			default: {
+		default:
+			{
 				log.Fatal("Parse: Invalid event", event)
 			}
 		}
@@ -162,21 +158,24 @@ func Parse(dest, arg string) ([]*Watcher, error) {
 		a.destType = destType
 		a.mask = mask
 		switch destType {
-			case DEST_REDIS : {
+		case DEST_REDIS:
+			{
 				a.Redis = new(Redis)
 				a.Redis.Host = dest_0
 				a.Redis.Port = 6379
 				if len(dest_tokens) > 1 {
-					ui , _ := strconv.Atoi(dest_tokens[1])
+					ui, _ := strconv.Atoi(dest_tokens[1])
 					a.Redis.Port = uint(ui)
 				}
 			}
-			case DEST_LOCAL : {
+		case DEST_LOCAL:
+			{
 				a.Local = new(Local)
 				a.Local.Base = dest
 				a.Local.Bin = fmt.Sprintf("%s/%s/%s", dest, a.Class, a.Queue)
 			}
-			default : {
+		default:
+			{
 				return nil, errors.New("Invalid destination: Specify a path or redis:port combo")
 			}
 		}
@@ -187,20 +186,18 @@ func Parse(dest, arg string) ([]*Watcher, error) {
 	return arr, nil
 }
 
-
-
 /*
  * Checks to see if we have this event in our mask. If so, return true & the string translation of the event type
  */
-func isDesiredEvent (mask uint32 , ev *fsnotify.FileEvent) (bool, string) {
+func isDesiredEvent(mask uint32, ev *fsnotify.FileEvent) (bool, string) {
 
-	if ((mask & MASK_CREATE > 0) && ev.IsCreate()) {
+	if (mask&MASK_CREATE > 0) && ev.IsCreate() {
 		return true, "CREATE"
-	} else if ((mask & MASK_DELETE > 0) && ev.IsDelete()) {
+	} else if (mask&MASK_DELETE > 0) && ev.IsDelete() {
 		return true, "DELETE"
-	} else if ((mask & MASK_UPDATE > 0) && ev.IsModify()) {
+	} else if (mask&MASK_UPDATE > 0) && ev.IsModify() {
 		return true, "UPDATE"
-	} else if ((mask & MASK_RENAME > 0) && ev.IsRename()) {
+	} else if (mask&MASK_RENAME > 0) && ev.IsRename() {
 		return true, "RENAME"
 	}
 
@@ -218,7 +215,6 @@ func (this *Watcher) Dump() {
 		this.mask)
 }
 
-
 func Launch(watchers []*Watcher) {
 
 	ch := make(chan *fsnotify.FileEvent, 255)
@@ -230,20 +226,18 @@ func Launch(watchers []*Watcher) {
 	}
 }
 
-
-
 func (this *Watcher) Transponder(ch chan *fsnotify.FileEvent) {
 	switch this.destType {
-		case DEST_REDIS:
-			this.TransponderRedis(ch)
-		case DEST_LOCAL:
-			this.TransponderLocal(ch)
-		default: {
+	case DEST_REDIS:
+		this.TransponderRedis(ch)
+	case DEST_LOCAL:
+		this.TransponderLocal(ch)
+	default:
+		{
 			log.Fatal("Transponder: Unknown transponder type")
 		}
 	}
 }
-
 
 func (this *Watcher) TransponderRedis(ch chan *fsnotify.FileEvent) {
 	DebugLn("TransponderRedis: Entered")
@@ -260,7 +254,6 @@ func (this *Watcher) TransponderRedis(ch chan *fsnotify.FileEvent) {
 
 	for ev := range ch {
 		Debug("TransponderRedis: Received event: %v\n", ev)
-
 
 		boo, event := isDesiredEvent(this.mask, ev)
 		if boo == false {
@@ -285,7 +278,6 @@ func (this *Watcher) TransponderRedis(ch chan *fsnotify.FileEvent) {
 	}
 }
 
-
 func (this *Watcher) TransponderLocal(ch chan *fsnotify.FileEvent) {
 	Debug("TransponderLocal: Entered")
 	for ev := range ch {
@@ -308,7 +300,6 @@ func (this *Watcher) TransponderLocal(ch chan *fsnotify.FileEvent) {
 	}
 }
 
-
 func (this *Watcher) Launch(ch chan *fsnotify.FileEvent) {
 	this.Dump()
 	mon, err := fsmonitor.NewWatcher()
@@ -328,7 +319,6 @@ func (this *Watcher) Launch(ch chan *fsnotify.FileEvent) {
 	}
 }
 
-
 func main() {
 
 	if len(os.Args) < 3 {
@@ -339,7 +329,7 @@ func main() {
 
 	arr := make([][]*Watcher, 0)
 
-	for k,arg := range os.Args {
+	for k, arg := range os.Args {
 		if k <= 1 {
 			continue
 		}
@@ -362,5 +352,5 @@ func main() {
 		go Launch(watchers)
 	}
 
-	select { }
+	select {}
 }
