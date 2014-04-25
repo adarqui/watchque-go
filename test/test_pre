@@ -1,0 +1,14 @@
+#!/bin/bash
+
+rm -rf /tmp/wgo-test/
+mkdir -p /tmp/wgo-test/{c,u,d,r,a,cudr}
+echo resque:queue:CreateQueue resque:queue:DeleteQueue resque:queue:UpdateQueue resque:queue:RenameQueue resque:queue:AllQueue resque:queue:AllQueue2 | xargs redis-cli del
+cp -Rp bin /tmp/wgo-test/bin
+cd /tmp/wgo-test/bin
+ln -s ../generic.sh CreateClass/CreateQueue
+ln -s ../generic.sh DeleteClass/DeleteQueue
+ln -s ../generic.sh UpdateClass/UpdateQueue
+ln -s ../generic.sh RenameClass/RenameQueue
+ln -s ../generic.sh AllClass/AllQueue
+ln -s ../generic.sh AllClass2/AllQueue2
+

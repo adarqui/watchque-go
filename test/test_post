@@ -1,0 +1,2 @@
+#!/bin/bash
+for i in resque:queue:CreateQueue resque:queue:DeleteQueue resque:queue:UpdateQueue resque:queue:RenameQueue resque:queue:AllQueue resque:queue:AllQueue2 ; do (echo $i; redis-cli LLEN $i); done
