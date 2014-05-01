@@ -20,7 +20,16 @@ IMPORTANT:
 
 Some quick tests.
 
-The first test is running ./test/challenge_async.sh 10000. This performs 6 simultaneous file operations (10k c, u, d, r, cudr, a). We then check the resque queues to see how many events got enqueue'd.
+The first test is running ./test/challenge_async.sh 10000. This performs 6 simultaneous file operations (10k c, C, u, d, r, cudr, a). We then check the resque queues to see how many events got enqueue'd.
+
+Event flags:
+
+	c - create
+	C - close write (somewhat like a create event)
+	u - update/modify
+	d - delete
+	r - rename/moved
+	a - all
 
 
 Without debugging:

@@ -34,6 +34,7 @@ const (
 	MASK_UPDATE = 0x02
 	MASK_DELETE = 0x04
 	MASK_RENAME = 0x08
+	MASK_CLOSE_WRITE = 0x10
 )
 
 type Watcher struct {
@@ -124,6 +125,10 @@ func Parse(dest, arg string) ([]*Watcher, error) {
 			{
 				mask |= MASK_CREATE
 			}
+		case 'C':
+			{
+				mask |= MASK_CLOSE_WRITE
+			}
 		case 'u':
 			{
 				mask |= MASK_UPDATE
@@ -138,7 +143,7 @@ func Parse(dest, arg string) ([]*Watcher, error) {
 			}
 		case 'a':
 			{
-				mask = MASK_CREATE | MASK_UPDATE | MASK_DELETE | MASK_RENAME
+				mask = MASK_CREATE | MASK_UPDATE | MASK_DELETE | MASK_RENAME | MASK_CLOSE_WRITE
 			}
 		default:
 			{
@@ -193,6 +198,8 @@ func isDesiredEvent(mask uint32, ev *fsnotify.FileEvent) (bool, string) {
 
 	if (mask&MASK_CREATE > 0) && ev.IsCreate() {
 		return true, "CREATE"
+	} else if (mask&MASK_CLOSE_WRITE > 0) && ev.IsCloseWrite() {
+		return true, "CLOSE_WRITE"
 	} else if (mask&MASK_DELETE > 0) && ev.IsDelete() {
 		return true, "DELETE"
 	} else if (mask&MASK_UPDATE > 0) && ev.IsModify() {
