@@ -8,21 +8,21 @@ import (
 
 var xstd = log.New(os.Stderr, "", log.LstdFlags)
 
-func Debug(format string, v ... interface{}) {
-	if opts.debug == true {
+func Debug(level int, format string, v ... interface{}) {
+	if opts.debug >= level {
 		xstd.Output(2, fmt.Sprintf(format, v...))
 	}
 }
 
 func DebugFatal(Status int, format string, v ... interface{}) {
-	if opts.debug == true {
+	if opts.debug > 0 {
 		xstd.Output(2, fmt.Sprintf(format, v...))
 		os.Exit(Status)
 	}
 }
 
-func DebugLn(v ... interface{}) {
-	if opts.debug == true {
+func DebugLn(level int, v ... interface{}) {
+	if opts.debug >= level {
 		xstd.Output(2, fmt.Sprintln(v...))
 	}
 }

@@ -62,7 +62,7 @@ type Local struct {
 }
 
 type Opts struct {
-	debug bool
+	debug int
 }
 
 var opts Opts
@@ -73,10 +73,14 @@ func usage() {
 
 func ParseOption(arg string) {
 	switch arg {
-	case "--debug=on":
-		opts.debug = true
+	case "--debug=1":
+		opts.debug = 1
+	case "--debug=2":
+		opts.debug = 2
+	case "--debug=3":
+		opts.debug = 3
 	case "--debug=off":
-		opts.debug = false
+		opts.debug = 0
 	}
 }
 
@@ -212,7 +216,7 @@ func isDesiredEvent(mask uint32, ev *fsnotify.FileEvent) (bool, string) {
 }
 
 func (this *Watcher) Dump() {
-	Debug("Dest=%s, Class=%s, Queue=%s, Events=%s, Source=%s, destType=%i, mask=%i\n",
+	Debug(1, "Dest=%s, Class=%s, Queue=%s, Events=%s, Source=%s, destType=%i, mask=%i\n",
 		this.Dest,
 		this.Class,
 		this.Queue,
@@ -247,7 +251,7 @@ func (this *Watcher) Transponder(ch chan *fsnotify.FileEvent) {
 }
 
 func (this *Watcher) TransponderRedis(ch chan *fsnotify.FileEvent) {
-	DebugLn("TransponderRedis: Entered")
+	DebugLn(2, "TransponderRedis: Entered")
 
 	this.Redis.red = redis.New()
 
@@ -260,11 +264,11 @@ func (this *Watcher) TransponderRedis(ch chan *fsnotify.FileEvent) {
 	this.Redis.red.SAdd("resque:queues", this.Queue)
 
 	for ev := range ch {
-		Debug("TransponderRedis: Received event: %v\n", ev)
+		Debug(3, "TransponderRedis: Received event: %v\n", ev)
 
 		boo, event := isDesiredEvent(this.mask, ev)
 		if boo == false {
-			Debug("TransponderRedis: Received undesired event: %v %s\n", ev, event)
+			Debug(3, "TransponderRedis: Received undesired event: %v %s\n", ev, event)
 			continue
 		}
 
@@ -274,7 +278,7 @@ func (this *Watcher) TransponderRedis(ch chan *fsnotify.FileEvent) {
 		rpkt.Args[0].FilePath = ev.Name
 		rpkt.Args[0].Event = event
 
-		Debug("TransponderRedis: Received desired event: %v %s\n", ev, event)
+		Debug(1, "TransponderRedis: Received desired event: %v %s -> Enqueu to: Queue=%s Class=%s\n", ev, event, this.Queue, rpkt.Class)
 
 		js, err := json.Marshal(&rpkt)
 		if err != nil {
@@ -286,13 +290,13 @@ func (this *Watcher) TransponderRedis(ch chan *fsnotify.FileEvent) {
 }
 
 func (this *Watcher) TransponderLocal(ch chan *fsnotify.FileEvent) {
-	Debug("TransponderLocal: Entered")
+	Debug(2, "TransponderLocal: Entered")
 	for ev := range ch {
-		Debug("TransponderLocal: Received event: %v\n", ev)
+		Debug(3, "TransponderLocal: Received event: %v\n", ev)
 
 		boo, event := isDesiredEvent(this.mask, ev)
 		if boo == false {
-			Debug("TransponderLocal: Received undesired event: %v %s\n", ev, event)
+			Debug(3, "TransponderLocal: Received undesired event: %v %s\n", ev, event)
 			continue
 		}
 
@@ -303,7 +307,7 @@ func (this *Watcher) TransponderLocal(ch chan *fsnotify.FileEvent) {
 			continue
 		}
 
-		Debug("TransponderLocal: Executed %s\n", this.Local.Bin)
+		Debug(1, "TransponderLocal: Executed %s\n", this.Local.Bin)
 	}
 }
 
@@ -321,7 +325,7 @@ func (this *Watcher) Launch(ch chan *fsnotify.FileEvent) {
 
 	for {
 		ev := <-mon.Event
-		Debug("Launch: Received event: %v\n", ev)
+		Debug(3, "Launch: Received event: %v\n", ev)
 		ch <- ev
 	}
 }
