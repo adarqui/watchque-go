@@ -68,7 +68,7 @@ type Opts struct {
 var opts Opts
 
 func usage() {
-	log.Fatal("usage: ./watchque-go [<redishost:port>|</path/to/bin/dir>] <Class1>:<Queue1>:<Events>:<Directory1,...,DirectoryN> ... <ClassN>:<QueueN>:<Events>:<Directory1, ...,DirectoryN>")
+	log.Fatal("usage: ./watchque-go [<redishost:port>|</path/to/bin/dir>] <Class1>:<Queue1>:<Events>:<Directory1,...,DirectoryN> ... <ClassN>:<QueueN>:<Events>:<Directory1, ...,DirectoryN> [optional flags: --debug=<1,2,3>]")
 }
 
 func ParseOption(arg string) {
