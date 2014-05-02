@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gosexy/redis"
-	"github.com/howeyc/fsnotify"
-	"github.com/romanoff/fsmonitor"
+	"github.com/adarqui/fsnotify"
+	"github.com/adarqui/fsmonitor"
 	"log"
 	"os"
 	"os/exec"
@@ -212,7 +212,7 @@ func isDesiredEvent(mask uint32, ev *fsnotify.FileEvent) (bool, string) {
 		return true, "RENAME"
 	}
 
-	return false, ""
+	return false, "UNDESIRED"
 }
 
 func (this *Watcher) Dump() {
@@ -264,11 +264,10 @@ func (this *Watcher) TransponderRedis(ch chan *fsnotify.FileEvent) {
 	this.Redis.red.SAdd("resque:queues", this.Queue)
 
 	for ev := range ch {
-		Debug(3, "TransponderRedis: Received event: %v\n", ev)
 
 		boo, event := isDesiredEvent(this.mask, ev)
 		if boo == false {
-			Debug(3, "TransponderRedis: Received undesired event: %v %s\n", ev, event)
+			Debug(3, "%v -> %s : Enqueue to: Queue=%s\n", event, ev.Name, this.Queue)
 			continue
 		}
 
@@ -278,7 +277,7 @@ func (this *Watcher) TransponderRedis(ch chan *fsnotify.FileEvent) {
 		rpkt.Args[0].FilePath = ev.Name
 		rpkt.Args[0].Event = event
 
-		Debug(1, "TransponderRedis: Received desired event: %v %s -> Enqueu to: Queue=%s Class=%s\n", ev, event, this.Queue, rpkt.Class)
+		Debug(1, "%v -> %s : Enqueue to: Queue=%s Class=%s\n", event, ev.Name, this.Queue, rpkt.Class)
 
 		js, err := json.Marshal(&rpkt)
 		if err != nil {

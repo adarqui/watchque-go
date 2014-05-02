@@ -3,9 +3,9 @@ all:
 	go build
 
 deps:
-	go get github.com/howeyc/fsnotify
+	go get github.com/adarqui/fsnotify
 	go get github.com/gosexy/redis
-	go get github.com/romanoff/fsmonitor
+	go get github.com/adarqui/fsmonitor
 
 clean:
 	rm -f watchque-go
