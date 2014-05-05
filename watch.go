@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"regexp"
 )
 
 type ResqueArgs struct {
@@ -44,6 +45,7 @@ type Watcher struct {
 	QueuePreFormatted string
 	Events            string
 	Source            string
+	Filter		  string
 	destType          int
 	mask              uint32
 	Redis             *Redis
@@ -68,7 +70,7 @@ type Opts struct {
 var opts Opts
 
 func usage() {
-	log.Fatal("usage: ./watchque-go [<redishost:port>|</path/to/bin/dir>] <Class1>:<Queue1>:<Events>:<Directory1,...,DirectoryN> ... <ClassN>:<QueueN>:<Events>:<Directory1, ...,DirectoryN> [optional flags: --debug=<1,2,3>]")
+	log.Fatal("usage: ./watchque-go [<redishost:port>|</path/to/bin/dir>] <Class1>:<Queue1>:<Events>:<Directory1,...,DirectoryN>[:filters] ... <ClassN>:<QueueN>:<Events>:<Directory1, ...,DirectoryN>[:filters] [optional flags: --debug=<1,2,3>]")
 }
 
 func ParseOption(arg string) {
@@ -88,7 +90,7 @@ func Parse(dest, arg string) ([]*Watcher, error) {
 	arr := make([]*Watcher, 0)
 
 	tokens := strings.Split(arg, ":")
-	if len(tokens) != 4 {
+	if len(tokens) < 4 {
 		return nil, errors.New("Invalid argument")
 	}
 
@@ -97,6 +99,12 @@ func Parse(dest, arg string) ([]*Watcher, error) {
 	events := tokens[2]
 	sources := tokens[3]
 	destType := DEST_REDIS
+
+	filter := ""
+	/* quick hack, need ability to filter */
+	if len(tokens) > 4 {
+		filter = tokens[4]
+	}
 
 	/*
 	 * Destination parsing: Redis vs Local scripts
@@ -164,6 +172,7 @@ func Parse(dest, arg string) ([]*Watcher, error) {
 		a.QueuePreFormatted = fmt.Sprintf("resque:queue:%s", a.Queue)
 		a.Events = events
 		a.Source = source
+		a.Filter = filter
 		a.destType = destType
 		a.mask = mask
 		switch destType {
@@ -270,6 +279,16 @@ func (this *Watcher) TransponderRedis(ch chan *fsnotify.FileEvent) {
 			Debug(3, "%v -> %s : Enqueue to: Queue=%s\n", event, ev.Name, this.Queue)
 			continue
 		}
+
+		/* Check against filters */
+		if this.Filter != "" {
+			truth, err := regexp.MatchString(this.Filter, ev.Name)
+			if truth == false || err != nil {
+				Debug(3, "%v -> %s : FAIL MATCH : Filter=%s", event, ev.Name, this.Filter)
+				continue
+			}	
+		}
+		
 
 		rpkt := ResquePacket{}
 		rpkt.Class = this.Class
